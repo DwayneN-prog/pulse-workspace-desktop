@@ -3,7 +3,7 @@
   "productName": "Pulse Workspace",
   "version": "1.0.0",
   "description": "Native Windows desktop application for Pulse Platform.",
-  "author": "Pulse",
+  "author": "Pulse Platform",
   "main": "src/main/main.js",
   "type": "commonjs",
   "scripts": {
@@ -27,7 +27,7 @@
   },
   "build": {
     "appId": "za.co.pulseworkspace.desktop",
-    "copyright": "Copyright © 2026 Pulse",
+    "copyright": "Copyright © 2026 Pulse Platform",
     "directories": {
       "output": "dist"
     },
@@ -43,8 +43,21 @@
       ]
     },
     "nsis": {
+      "artifactName": "PulseWorkspaceSetup.exe",
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pulse Workspace",
+      "installerIcon": "assets/icons/icon.ico",
+      "uninstallerIcon": "assets/icons/icon.ico",
+      "uninstallDisplayName": "${productName} ${version}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "DwayneN-prog",
+      "repo": "pulse-workspace-desktop"
     }
   }
 }
