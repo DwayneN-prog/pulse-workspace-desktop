@@ -1,11 +1,18 @@
 // Pulse Workspace Desktop - main process entry point.
 //
 // This file owns window creation, app lifecycle, and the security-relevant
-// BrowserWindow settings. It composes two separate modules rather than
-// growing to hold their logic inline:
+// BrowserWindow settings. It composes modules rather than growing to hold
+// their logic inline:
 //   - src/preload/preload.js - the renderer's only bridge to this process.
+//     Unchanged by the splash/branding work below - the splash window
+//     doesn't get one at all (see createSplashWindow).
 //   - src/updater/autoUpdater.js - reserved, currently a no-op (see that
 //     file's header for why auto-updates aren't implemented yet).
+//   - src/renderer/splash/ - static local content (no preload, no remote
+//     navigation), shown immediately on launch. A self-contained branding
+//     component (see its own README) - this file's only coupling to it is
+//     the file path below and the __pulseSplashReady() call in
+//     revealMainWindow().
 
 'use strict';
 
@@ -31,8 +38,125 @@ const MIN_WINDOW_WIDTH = 1024;
 const MIN_WINDOW_HEIGHT = 700;
 
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icons', 'icon.ico');
+const SPLASH_PATH = path.join(__dirname, '..', 'renderer', 'splash', 'index.html');
+const SPLASH_WIDTH = 420;
+const SPLASH_HEIGHT = 320;
+// How long the main window takes to fade in once the splash hands off to
+// it - long enough to read as an intentional transition, short enough not
+// to feel like it's stalling. The splash's own fade-out timing is owned by
+// splash.css/splash.js, not this file (see revealMainWindow).
+const MAIN_FADE_IN_MS = 320;
+const FADE_STEPS = 12;
 
 let mainWindow = null;
+let splashWindow = null;
+
+function createSplashWindow() {
+  const win = new BrowserWindow({
+    width: SPLASH_WIDTH,
+    height: SPLASH_HEIGHT,
+    frame: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    // Its own taskbar entry would flash in and out within a fraction of a
+    // second and read as a glitch, not a second window - the main window's
+    // entry is the only one that should ever appear.
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    center: true,
+    // Same reasoning as the main window's backgroundColor below: paints
+    // the correct color from frame zero, so there's nothing to flash
+    // between "window exists" and "splash.html has rendered."
+    backgroundColor: '#060a12',
+    show: false,
+    icon: ICON_PATH,
+    webPreferences: {
+      // Same security baseline as the main window (see its webPreferences
+      // comment) even though this content is local and static - there's
+      // no reason for this window to be less isolated than the one that
+      // loads remote content. No preload: splash.html is pure CSS/markup
+      // with nothing to bridge to the main process.
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  win.loadFile(SPLASH_PATH);
+  win.once('ready-to-show', () => win.show());
+  win.on('closed', () => {
+    if (splashWindow === win) splashWindow = null;
+  });
+
+  return win;
+}
+
+// Animates a window's opacity from `from` to `to` over durationMs, stepped
+// by hand - Electron has no CSS-level transition for a native window's own
+// alpha, so this is the standard approach for a window-level (as opposed
+// to in-page) fade. Returns a promise that resolves once the animation
+// finishes, so callers can sequence work after it.
+function animateWindowOpacity(win, from, to, durationMs) {
+  return new Promise((resolve) => {
+    if (!win || win.isDestroyed()) {
+      resolve();
+      return;
+    }
+
+    win.setOpacity(from);
+    let step = 0;
+    const timer = setInterval(() => {
+      step += 1;
+      if (win.isDestroyed()) {
+        clearInterval(timer);
+        resolve();
+        return;
+      }
+      win.setOpacity(from + (to - from) * (step / FADE_STEPS));
+      if (step >= FADE_STEPS) {
+        clearInterval(timer);
+        resolve();
+      }
+    }, durationMs / FADE_STEPS);
+  });
+}
+
+// The one place "the app is ready to be seen" is decided - called once the
+// main window has actually painted content (ready-to-show), and also from
+// the did-fail-load fallback below so a network hiccup can't strand the
+// user on the splash screen forever. Both hand off happen concurrently -
+// the splash finishing its current ECG pass and fading itself out
+// (splash.js owns that timing), while the main window fades in - rather
+// than one blocking the other.
+async function revealMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  mainWindow.show();
+  const mainFadeIn = animateWindowOpacity(mainWindow, 0, 1, MAIN_FADE_IN_MS);
+
+  const splash = splashWindow;
+  if (splash && !splash.isDestroyed()) {
+    try {
+      // Runs in the splash page's own JS context (it has no preload, so
+      // there's no contextBridge API to call instead) - safe because this
+      // is local content this app shipped, not remote or untrusted. The
+      // returned promise doesn't resolve until splash.js has let the
+      // current light-sweep pass finish and faded its content out, so
+      // there's nothing left on screen by the time this continues.
+      await splash.webContents.executeJavaScript('window.__pulseSplashReady && window.__pulseSplashReady()');
+    } catch {
+      // The splash page didn't respond (e.g. still loading, or threw) -
+      // fall through and close it anyway rather than leaving it stuck on
+      // screen indefinitely.
+    }
+    if (!splash.isDestroyed()) splash.destroy();
+  }
+
+  await mainFadeIn;
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -41,15 +165,23 @@ function createMainWindow() {
     height: WINDOW_HEIGHT,
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
+    // Same center point as the splash window, so revealMainWindow()'s fade
+    // reads as the splash dissolving into the app, not two unrelated
+    // windows in different corners of the screen.
+    center: true,
     // Matches the web app's own dark theme background, so there's no white
     // flash between the window frame appearing and the page finishing its
     // first paint.
     backgroundColor: '#060a12',
-    // Paired with the 'ready-to-show' handler below - the window is built
-    // hidden and only shown once it has something to display.
+    // Paired with revealMainWindow() below - the window is built hidden
+    // and only shown once it has something to display (or has definitively
+    // failed to - see the did-fail-load handler).
     show: false,
-    // Falls back to Electron's default icon until a real .ico is added
-    // here - not an error, just unbranded until then.
+    // Starts fully transparent so revealMainWindow()'s fade-in has
+    // something to animate from - belt-and-braces alongside `show: false`,
+    // not strictly load-bearing on its own. Windows/macOS only; ignored on
+    // Linux, where this app isn't targeted anyway.
+    opacity: 0,
     icon: ICON_PATH,
     webPreferences: {
       // Security baseline for a window that loads remote, third-party-to-
@@ -87,8 +219,18 @@ function createMainWindow() {
 
   mainWindow.loadURL(WORKSPACE_URL);
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  mainWindow.once('ready-to-show', revealMainWindow);
+
+  // A failed load (offline, DNS hiccup, server down) still counts as
+  // "ready to be seen" - Chromium's own network-error page is a better
+  // outcome than leaving the user stuck on the splash screen indefinitely
+  // with no way to tell what's wrong.
+  mainWindow.webContents.on('did-fail-load', (event, errorCode) => {
+    // -3 is Chromium's ERR_ABORTED, fired for routine cases like a
+    // redirect interrupting an in-progress load - not a real failure, and
+    // not something that should end the splash screen early.
+    if (errorCode === -3) return;
+    revealMainWindow();
   });
 
   // Any attempt to open a new window (target="_blank", window.open(), a
@@ -137,6 +279,11 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    // Splash first, main window second: the splash is on screen at the
+    // earliest possible moment, and createMainWindow()'s loadURL only
+    // starts once the splash is already visible - there's no gap where
+    // neither window exists yet.
+    splashWindow = createSplashWindow();
     createMainWindow();
     initAutoUpdater(mainWindow);
 

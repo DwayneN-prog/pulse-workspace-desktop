@@ -3,7 +3,7 @@
   "productName": "Pulse Workspace",
   "version": "1.0.0",
   "description": "Native Windows desktop application for Pulse Platform.",
-  "author": "Dwayne N",
+  "author": "Pulse",
   "main": "src/main/main.js",
   "type": "commonjs",
   "scripts": {
@@ -22,6 +22,29 @@
   "homepage": "https://github.com/DwayneN-prog/pulse-workspace-desktop",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^43.2.0"
+    "electron": "^43.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "za.co.pulseworkspace.desktop",
+    "copyright": "Copyright © 2026 Pulse",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icons/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
