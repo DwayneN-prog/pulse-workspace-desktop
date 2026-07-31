@@ -13,6 +13,10 @@
 //     component (see its own README) - this file's only coupling to it is
 //     the file path below and the __pulseSplashReady() call in
 //     revealMainWindow().
+//   - src/renderer/connection-error.html - static local fallback shown in
+//     the main window itself when loading the real app fails (see the
+//     did-fail-load handler in createMainWindow) - offline, DNS failure,
+//     server down, etc.
 
 'use strict';
 
@@ -39,6 +43,7 @@ const MIN_WINDOW_HEIGHT = 700;
 
 const ICON_PATH = path.join(__dirname, '..', '..', 'assets', 'icons', 'icon.ico');
 const SPLASH_PATH = path.join(__dirname, '..', 'renderer', 'splash', 'index.html');
+const CONNECTION_ERROR_PATH = path.join(__dirname, '..', 'renderer', 'connection-error.html');
 const SPLASH_WIDTH = 420;
 const SPLASH_HEIGHT = 320;
 // How long the main window takes to fade in once the splash hands off to
@@ -222,14 +227,27 @@ function createMainWindow() {
   mainWindow.once('ready-to-show', revealMainWindow);
 
   // A failed load (offline, DNS hiccup, server down) still counts as
-  // "ready to be seen" - Chromium's own network-error page is a better
-  // outcome than leaving the user stuck on the splash screen indefinitely
-  // with no way to tell what's wrong.
-  mainWindow.webContents.on('did-fail-load', (event, errorCode) => {
+  // "ready to be seen" - stalling on the splash screen forever would be
+  // worse. Electron does *not* show Chromium's own network-error
+  // interstitial automatically the way a full browser tab would (that
+  // surfaced as a plain blank window, with no message and no way to
+  // recover short of restarting the app) - so this loads a local fallback
+  // page with an explanation and a Retry button instead.
+  mainWindow.webContents.on('did-fail-load', async (event, errorCode) => {
     // -3 is Chromium's ERR_ABORTED, fired for routine cases like a
     // redirect interrupting an in-progress load - not a real failure, and
     // not something that should end the splash screen early.
     if (errorCode === -3) return;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        await mainWindow.loadFile(CONNECTION_ERROR_PATH, { query: { code: String(errorCode) } });
+      } catch {
+        // Loading the *local* fallback page failed too (shouldn't happen -
+        // it ships with the app) - fall through and reveal whatever state
+        // the window is in rather than leaving it hidden.
+      }
+    }
     revealMainWindow();
   });
 

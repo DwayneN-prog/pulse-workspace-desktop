@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pulse Workspace</title>
+<style>
+  :root {
+    --bg: #060a12;
+    --text: #e6edf3;
+    --text-soft: #9aa7b5;
+    --brand: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .wrap {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    text-align: center;
+  }
+  .mark {
+    width: 48px;
+    height: 48px;
+    opacity: 0.85;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: #fff;
+  }
+  p {
+    margin: 0;
+    max-width: 420px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-soft);
+  }
+  .retry {
+    margin-top: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .retry:hover { filter: brightness(1.08); }
+  .retry:active { transform: translateY(1px); }
+  .retry svg { width: 15px; height: 15px; }
+  .detail {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #5b6572;
+  }
+
+  /* Two states, one page: the error message (default) and a "connecting"
+     state swapped in the instant Retry is clicked, so there's clear
+     feedback for however long that attempt takes - not just a disabled
+     button sitting on top of the same static error text. If the retry
+     fails too, did-fail-load (main.js) reloads this page fresh, which
+     naturally resets back to the error state - nothing here needs to
+     handle that reversal itself. */
+  .state-connecting { display: none; }
+  body.is-connecting .state-error { display: none; }
+  body.is-connecting .state-connecting { display: flex; }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: var(--brand);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap state-error">
+    <img class="mark" src="../../assets/icons/icon.ico" alt="" />
+    <h1>Can't reach Pulse Workspace</h1>
+    <p>
+      This usually means there's no internet connection, or the Pulse
+      servers are temporarily unavailable. Check your connection and try
+      again.
+    </p>
+    <button class="retry" id="retry-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" />
+      </svg>
+      <span>Retry</span>
+    </button>
+    <div class="detail" id="detail"></div>
+  </div>
+
+  <div class="wrap state-connecting">
+    <img class="mark" src="../../assets/icons/icon.ico" alt="" />
+    <div class="spinner" aria-hidden="true"></div>
+    <h1>Connecting to Pulse Workspace...</h1>
+  </div>
+
+  <script>
+    (function () {
+      // Query string set by main.js when it loads this page (see
+      // main.js's did-fail-load handler) - shown only as small print, for
+      // support/diagnostic purposes, never as the primary message.
+      var params = new URLSearchParams(window.location.search);
+      var code = params.get('code');
+      if (code) {
+        document.getElementById('detail').textContent = 'Error code: ' + code;
+      }
+
+      document.getElementById('retry-btn').addEventListener('click', function () {
+        document.body.classList.add('is-connecting');
+        // A plain top-level navigation back to the real app - main.js's
+        // will-navigate handler already allows navigation *to* the
+        // Workspace origin (it only blocks navigation *away* from it), so
+        // this is not intercepted.
+        window.location.href = 'https://pulseworkspace.co.za';
+      });
+    })();
+  </script>
+</body>
+</html>
