@@ -59,5 +59,8 @@
       "owner": "DwayneN-prog",
       "repo": "pulse-workspace-desktop"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

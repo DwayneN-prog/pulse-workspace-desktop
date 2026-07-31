@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pulse Workspace</title>
+<style>
+  :root {
+    --bg: #060a12;
+    --text: #e6edf3;
+    --text-soft: #9aa7b5;
+    --brand: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .wrap {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .mark { width: 40px; height: 40px; }
+  h1 { font-size: 16.5px; font-weight: 700; margin: 0; color: #fff; }
+  p { margin: 0; max-width: 320px; font-size: 13px; line-height: 1.55; color: var(--text-soft); }
+  .actions { display: flex; gap: 10px; margin-top: 6px; }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary { background: transparent; color: var(--text-soft); border-color: rgba(255, 255, 255, 0.14); }
+  .btn-secondary:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.28); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="mark" src="../../assets/icons/icon.ico" alt="" />
+    <h1>Update ready</h1>
+    <p id="message">A new version of Pulse Workspace is ready to install.</p>
+    <div class="actions">
+      <button class="btn-secondary" id="later-btn" type="button">Later</button>
+      <button class="btn-primary" id="restart-btn" type="button">Restart Now</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Query string set by src/updater/autoUpdater.js when it loads this
+      // page, from electron-updater's own update-downloaded event.
+      var params = new URLSearchParams(window.location.search);
+      var version = params.get('version');
+      if (version) {
+        document.getElementById('message').textContent = 'Pulse Workspace ' + version + ' is ready to install.';
+      }
+
+      document.getElementById('restart-btn').addEventListener('click', function () {
+        window.pulseUpdater.restartNow();
+      });
+      document.getElementById('later-btn').addEventListener('click', function () {
+        window.pulseUpdater.dismiss();
+      });
+    })();
+  </script>
+</body>
+</html>
