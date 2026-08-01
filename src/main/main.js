@@ -132,15 +132,18 @@ function animateWindowOpacity(win, from, to, durationMs) {
 // The one place "the app is ready to be seen" is decided - called once the
 // main window has actually painted content (ready-to-show), and also from
 // the did-fail-load fallback below so a network hiccup can't strand the
-// user on the splash screen forever. Both hand off happen concurrently -
-// the splash finishing its current ECG pass and fading itself out
-// (splash.js owns that timing), while the main window fades in - rather
-// than one blocking the other.
+// user on the splash screen forever.
+//
+// Deliberately sequential, not concurrent: the splash (420x320) is much
+// smaller than the main window (1400x900), both centered - fading the main
+// window in at the same time the splash was fading out let the main
+// window's content show through around the splash's edges before it had
+// actually disappeared (visible as "the dashboard shows in the back while
+// the splash is still showing"). Waiting for the splash to fully fade out
+// and get destroyed *first*, only then showing the main window, means only
+// one window is ever on screen at a time.
 async function revealMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-
-  mainWindow.show();
-  const mainFadeIn = animateWindowOpacity(mainWindow, 0, 1, MAIN_FADE_IN_MS);
 
   const splash = splashWindow;
   if (splash && !splash.isDestroyed()) {
@@ -160,7 +163,9 @@ async function revealMainWindow() {
     if (!splash.isDestroyed()) splash.destroy();
   }
 
-  await mainFadeIn;
+  if (mainWindow.isDestroyed()) return;
+  mainWindow.show();
+  await animateWindowOpacity(mainWindow, 0, 1, MAIN_FADE_IN_MS);
 }
 
 function createMainWindow() {
