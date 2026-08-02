@@ -227,7 +227,16 @@ function createMainWindow() {
     event.preventDefault();
   });
 
-  mainWindow.loadURL(WORKSPACE_URL);
+  // Not WORKSPACE_URL's bare origin - '/' there is the public marketing
+  // landing page (Start Free Trial, Download for Windows) meant for a
+  // logged-out browser visitor discovering the product, which reads as
+  // nonsensical chrome inside the desktop app someone already installed
+  // and is opening. '/login' already redirects to '/' itself the moment a
+  // session exists (workspace-app/routes/auth.js), so a returning signed-in
+  // user still lands on their dashboard exactly as before - only the
+  // logged-out first-run/post-logout case actually changes, from the
+  // marketing page to the login form.
+  mainWindow.loadURL(`${WORKSPACE_URL}/login`);
 
   mainWindow.once('ready-to-show', revealMainWindow);
 
