@@ -12,16 +12,21 @@
 // update status once src/updater is implemented, native notifications)
 // gets added here later, alongside matching ipcMain handlers in main.js.
 //
-// `versions.app` is this shell's own package version (0.2.1, etc.), not the
+// `versions.app` is this shell's own package version (0.2.2, etc.), not the
 // remote Workspace web app's - the loaded page (pulse-platform's own
 // package.json) has no way to know which desktop build it's running inside
-// otherwise. Read directly from the packaged package.json rather than an
-// ipcMain round trip to app.getVersion() - package.json ships inside the
-// asar already (build.files in package.json), so this is a plain, static
-// require, not a main-process call.
+// otherwise. Sandboxed preload's require() is a curated polyfill - it can't
+// load arbitrary local files like package.json (confirmed: doing so threw
+// and silently killed this entire script, taking the whole pulseDesktop
+// bridge down with it). main.js passes the version in instead via
+// webPreferences.additionalArguments, which lands in this process's own
+// process.argv - the supported way to hand simple data across the sandbox
+// boundary without an async IPC round trip.
 
 const { contextBridge } = require('electron');
-const { version: appVersion } = require('../../package.json');
+
+const versionArg = process.argv.find((arg) => arg.startsWith('--app-version='));
+const appVersion = versionArg ? versionArg.slice('--app-version='.length) : null;
 
 contextBridge.exposeInMainWorld('pulseDesktop', {
   versions: {

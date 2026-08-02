@@ -208,6 +208,16 @@ function createMainWindow() {
       nodeIntegration: false,
       sandbox: true,
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      // Sandboxed preload's require() is a curated polyfill (contextBridge,
+      // ipcRenderer, a handful of Node built-ins) - it cannot load arbitrary
+      // local files, so preload.js can't just require('../../package.json')
+      // for its own version (that was tried and silently broke the entire
+      // preload script, taking window.pulseDesktop down with it - Electron
+      // docs: https://www.electronjs.org/docs/latest/tutorial/sandbox).
+      // additionalArguments appends onto the renderer's process.argv, which
+      // sandboxed preload *does* have access to - the supported way to hand
+      // simple data across this boundary without an async IPC round trip.
+      additionalArguments: [`--app-version=${app.getVersion()}`],
     },
   });
 
