@@ -11,12 +11,22 @@
 // not app data - and proves the bridge is wired correctly. Real IPC (e.g.
 // update status once src/updater is implemented, native notifications)
 // gets added here later, alongside matching ipcMain handlers in main.js.
+//
+// `versions.app` is this shell's own package version (0.2.1, etc.), not the
+// remote Workspace web app's - the loaded page (pulse-platform's own
+// package.json) has no way to know which desktop build it's running inside
+// otherwise. Read directly from the packaged package.json rather than an
+// ipcMain round trip to app.getVersion() - package.json ships inside the
+// asar already (build.files in package.json), so this is a plain, static
+// require, not a main-process call.
 
 const { contextBridge } = require('electron');
+const { version: appVersion } = require('../../package.json');
 
 contextBridge.exposeInMainWorld('pulseDesktop', {
   versions: {
     chrome: process.versions.chrome,
     electron: process.versions.electron,
+    app: appVersion,
   },
 });
