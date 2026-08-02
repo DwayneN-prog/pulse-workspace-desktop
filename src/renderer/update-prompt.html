@@ -9,6 +9,7 @@
     --text: #e6edf3;
     --text-soft: #9aa7b5;
     --brand: #3b82f6;
+    --brand-accent: var(--brand);
   }
   * { box-sizing: border-box; }
   html, body {
@@ -47,10 +48,151 @@
   .btn-primary:hover { filter: brightness(1.08); }
   .btn-secondary { background: transparent; color: var(--text-soft); border-color: rgba(255, 255, 255, 0.14); }
   .btn-secondary:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.28); }
+
+  /* Two states, one window: this dialog now opens the moment a download
+     starts, not just once it's finished - "downloading" shows progress,
+     "ready" is the original Restart Now / Later prompt. Same pattern as
+     src/renderer/connection-error.html's error/connecting states. */
+  .state-ready { display: none; }
+  body.is-ready .state-downloading { display: none; }
+  body.is-ready .state-ready { display: flex; }
+
+  .percent {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    margin-top: -4px;
+  }
+
+  /* ---------- Pulse block loader ----------
+     Same component as src/renderer/splash/splash.css and
+     src/renderer/connection-error.html - duplicated rather than shared for
+     the same reason as both (local files only, no build step). Same 140px
+     scale as connection-error.html's - this window is the same class of
+     small, compact dialog. */
+
+  .pulse-loader__track {
+    --loader-trail: color-mix(in srgb, var(--brand-accent) 22%, #48566b);
+    --loader-glow: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+    --loader-duration: 1.6s;
+    --loader-container-size: 140px;
+    --loader-box-size: calc(var(--loader-container-size) * 0.132);
+    --loader-radius: 22%;
+
+    width: var(--loader-container-size);
+    height: calc(var(--loader-box-size) * 1.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+  }
+
+  .pulse-loader__block {
+    width: var(--loader-box-size);
+    height: var(--loader-box-size);
+    position: relative;
+    display: block;
+    transform-origin: -50% center;
+    border-radius: var(--loader-radius);
+  }
+
+  .pulse-loader__block::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--loader-radius);
+    background: var(--loader-trail);
+  }
+
+  .pulse-loader__block:nth-child(1) {
+    animation: pulse-loader-slide var(--loader-duration) ease-in-out infinite alternate;
+    z-index: 1;
+  }
+  .pulse-loader__block:nth-child(1)::after {
+    background: var(--brand-accent);
+    box-shadow: 0 0 14px 1px var(--loader-glow);
+    animation: pulse-loader-glow var(--loader-duration) ease-in-out infinite alternate;
+  }
+
+  .pulse-loader__block:nth-child(2) { animation: pulse-loader-flip-1 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(3) { animation: pulse-loader-flip-2 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(4) { animation: pulse-loader-flip-3 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(5) { animation: pulse-loader-flip-4 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(2)::after { animation: pulse-loader-squidge-1 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(3)::after { animation: pulse-loader-squidge-2 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(4)::after { animation: pulse-loader-squidge-3 var(--loader-duration) ease-in-out infinite alternate; }
+  .pulse-loader__block:nth-child(5)::after { animation: pulse-loader-squidge-4 var(--loader-duration) ease-in-out infinite alternate; }
+
+  @keyframes pulse-loader-slide {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(calc(var(--loader-container-size) - (var(--loader-box-size) * 1.25))); }
+  }
+  @keyframes pulse-loader-glow {
+    0%   { background: var(--brand-accent); box-shadow: 0 0 14px 1px var(--loader-glow); }
+    100% { background: color-mix(in srgb, var(--brand-accent) 70%, white 30%); box-shadow: 0 0 20px 3px var(--loader-glow); }
+  }
+
+  @keyframes pulse-loader-flip-1 { 0%, 15% { transform: rotate(0); } 35%, 100% { transform: rotate(-180deg); } }
+  @keyframes pulse-loader-flip-2 { 0%, 30% { transform: rotate(0); } 50%, 100% { transform: rotate(-180deg); } }
+  @keyframes pulse-loader-flip-3 { 0%, 45% { transform: rotate(0); } 65%, 100% { transform: rotate(-180deg); } }
+  @keyframes pulse-loader-flip-4 { 0%, 60% { transform: rotate(0); } 80%, 100% { transform: rotate(-180deg); } }
+
+  @keyframes pulse-loader-squidge-1 {
+    5%        { transform-origin: center bottom; transform: scale(1, 1); }
+    15%       { transform-origin: center bottom; transform: scale(1.3, 0.7); }
+    20%, 25%  { transform-origin: center bottom; transform: scale(0.8, 1.4); }
+    40%       { transform-origin: center top; transform: scale(1.3, 0.7); }
+    55%, 100% { transform-origin: center top; transform: scale(1, 1); }
+  }
+  @keyframes pulse-loader-squidge-2 {
+    20%       { transform-origin: center bottom; transform: scale(1, 1); }
+    30%       { transform-origin: center bottom; transform: scale(1.3, 0.7); }
+    35%, 40%  { transform-origin: center bottom; transform: scale(0.8, 1.4); }
+    55%       { transform-origin: center top; transform: scale(1.3, 0.7); }
+    70%, 100% { transform-origin: center top; transform: scale(1, 1); }
+  }
+  @keyframes pulse-loader-squidge-3 {
+    35%       { transform-origin: center bottom; transform: scale(1, 1); }
+    45%       { transform-origin: center bottom; transform: scale(1.3, 0.7); }
+    50%, 55%  { transform-origin: center bottom; transform: scale(0.8, 1.4); }
+    70%       { transform-origin: center top; transform: scale(1.3, 0.7); }
+    85%, 100% { transform-origin: center top; transform: scale(1, 1); }
+  }
+  @keyframes pulse-loader-squidge-4 {
+    50%       { transform-origin: center bottom; transform: scale(1, 1); }
+    60%       { transform-origin: center bottom; transform: scale(1.3, 0.7); }
+    65%, 70%  { transform-origin: center bottom; transform: scale(0.8, 1.4); }
+    85%       { transform-origin: center top; transform: scale(1.3, 0.7); }
+    100%      { transform-origin: center top; transform: scale(1, 1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-loader__block,
+    .pulse-loader__block::after {
+      animation: none !important;
+    }
+    .pulse-loader__block:nth-child(1)::after {
+      background: var(--brand-accent);
+    }
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap state-downloading">
+    <img class="mark" src="../../assets/icons/icon.ico" alt="" />
+    <div class="pulse-loader__track" role="status" aria-live="polite" aria-label="Downloading update">
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+    </div>
+    <h1 id="downloading-title">Downloading update</h1>
+    <div class="percent" id="percent">0%</div>
+  </div>
+
+  <div class="wrap state-ready">
     <img class="mark" src="../../assets/icons/icon.ico" alt="" />
     <h1>Update ready</h1>
     <p id="message">A new version of Pulse Workspace is ready to install.</p>
@@ -62,13 +204,37 @@
 
   <script>
     (function () {
-      // Query string set by src/updater/autoUpdater.js when it loads this
-      // page, from electron-updater's own update-downloaded event.
+      // Query string set by src/updater/autoUpdater.js when it first opens
+      // this window - both the version and which state to start in
+      // (normally 'downloading'; 'ready' only for the edge case where this
+      // window is created directly from update-downloaded with no prior
+      // update-available). Deciding the *initial* state this way, not by
+      // waiting for an onReady IPC message, means this window's first
+      // paint never depends on a message that could arrive before this
+      // script has even run.
       var params = new URLSearchParams(window.location.search);
       var version = params.get('version');
-      if (version) {
-        document.getElementById('message').textContent = 'Pulse Workspace ' + version + ' is ready to install.';
+      var state = params.get('state');
+
+      if (state === 'ready') {
+        document.getElementById('percent').textContent = '100%';
+        if (version) document.getElementById('message').textContent = 'Pulse Workspace ' + version + ' is ready to install.';
+        document.body.classList.add('is-ready');
+      } else if (version) {
+        document.getElementById('downloading-title').textContent = 'Downloading Pulse Workspace ' + version;
       }
+
+      window.pulseUpdater.onProgress(function (percent) {
+        document.getElementById('percent').textContent = Math.round(percent) + '%';
+      });
+
+      window.pulseUpdater.onReady(function (readyVersion) {
+        document.getElementById('percent').textContent = '100%';
+        if (readyVersion) {
+          document.getElementById('message').textContent = 'Pulse Workspace ' + readyVersion + ' is ready to install.';
+        }
+        document.body.classList.add('is-ready');
+      });
 
       document.getElementById('restart-btn').addEventListener('click', function () {
         window.pulseUpdater.restartNow();

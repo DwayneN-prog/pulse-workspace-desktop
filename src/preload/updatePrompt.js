@@ -12,4 +12,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('pulseUpdater', {
   restartNow: () => ipcRenderer.send('pulse-updater:restart-now'),
   dismiss: () => ipcRenderer.send('pulse-updater:dismiss'),
+  // This window now opens as soon as a download starts (not just once it's
+  // finished) - these two let the page react to the same download it's
+  // showing progress for, without exposing all of ipcRenderer.
+  onProgress: (callback) => ipcRenderer.on('pulse-updater:progress', (_event, percent) => callback(percent)),
+  onReady: (callback) => ipcRenderer.on('pulse-updater:ready', (_event, version) => callback(version)),
 });

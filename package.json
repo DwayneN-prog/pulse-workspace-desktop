@@ -1,7 +1,7 @@
 {
   "name": "pulse-workspace-desktop",
   "productName": "Pulse Workspace",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Native Windows desktop application for Pulse Platform.",
   "author": "Pulse Platform",
   "main": "src/main/main.js",
