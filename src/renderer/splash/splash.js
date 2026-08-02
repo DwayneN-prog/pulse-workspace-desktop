@@ -21,25 +21,26 @@
   // once the fade has actually finished, not the instant it started.
   var LEAVE_FADE_MS = 450;
 
-  // Upper bound on how long __pulseSplashReady will wait for the ECG sweep
-  // to reach a natural loop boundary before giving up and leaving anyway -
-  // slightly longer than one full sweep cycle (splash.css's 2.6s), so a
-  // healthy animation always gets to finish its pass under this ceiling.
-  var MAX_WAIT_FOR_CYCLE_MS = 2800;
+  // Upper bound on how long __pulseSplashReady will wait for the pulse
+  // block's current pass to reach a loop boundary before giving up and
+  // leaving anyway - the loader's own animation-duration is 1.6s
+  // (splash.css's --loader-duration), so this leaves comfortable headroom
+  // for a healthy animation to finish its current leg under this ceiling.
+  var MAX_WAIT_FOR_CYCLE_MS = 1800;
 
   function startMessageRotation() {
-    var el = document.getElementById("status-message");
+    var el = document.getElementById("pulse-loader-message");
     if (!el) return;
 
     var index = 0;
     el.textContent = MESSAGES[0];
 
     setInterval(function () {
-      el.classList.add("is-swapping");
+      el.classList.add("pulse-loader__message--swapping");
       setTimeout(function () {
         index = (index + 1) % MESSAGES.length;
         el.textContent = MESSAGES[index];
-        el.classList.remove("is-swapping");
+        el.classList.remove("pulse-loader__message--swapping");
       }, MESSAGE_FADE_MS);
     }, MESSAGE_INTERVAL_MS);
   }
@@ -65,27 +66,32 @@
       }
 
       var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      var sweep = document.querySelector(".ecg-fx__sweep");
+      // The sliding block is the one continuously-running animation in the
+      // loader (the four flip/squidge blocks share the same duration and
+      // stay in phase with it) - waiting on this one element's iteration
+      // boundary is enough to know the whole group has reached a clean
+      // stopping point.
+      var pulseBlock = document.querySelector(".pulse-loader__block:first-child");
 
-      if (reducedMotion || !sweep) {
+      if (reducedMotion || !pulseBlock) {
         leave();
         return;
       }
 
-      // Let the in-flight light sweep complete its current pass rather than
+      // Let the in-flight motion complete its current leg rather than
       // cutting it off mid-travel - finishing the motion reads as
       // intentional; freezing it mid-frame reads as a glitch.
       function onIteration() {
-        sweep.removeEventListener("animationiteration", onIteration);
+        pulseBlock.removeEventListener("animationiteration", onIteration);
         leave();
       }
-      sweep.addEventListener("animationiteration", onIteration);
+      pulseBlock.addEventListener("animationiteration", onIteration);
 
       // Safety net: an animationiteration event that never fires (e.g. the
       // animation was somehow already stopped) must not hang the app on
       // the splash screen forever.
       setTimeout(function () {
-        sweep.removeEventListener("animationiteration", onIteration);
+        pulseBlock.removeEventListener("animationiteration", onIteration);
         leave();
       }, MAX_WAIT_FOR_CYCLE_MS);
     });

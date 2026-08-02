@@ -7,33 +7,22 @@
 </head>
 <body>
   <div class="splash">
-    <div class="logo-stage">
-      <!-- The actual Pulse logo asset (assets/logo/pulse-logo.png - a
-           straight copy of the team's original upload,
-           PulseCore_Official_Logo-removebg-preview(1).png, under a
-           URL-safe filename; pixels untouched), used exactly as provided.
-           See splash.css's "Logo + ECG light-sweep overlay" section for why
-           the animation is a masked layer painted on top rather than any
-           change to the image itself. -->
-      <img class="logo-art" src="../../../assets/logo/pulse-logo.png" alt="Pulse" />
-      <!-- Unmasked, soft, deliberately larger than the line itself - this
-           is what reads as "the ECG glowing," as opposed to .ecg-fx below,
-           which is the crisp light masked exactly to the line's pixels.
-           Siblings of .ecg-fx on purpose: nesting either inside it would
-           inherit its mask and get clipped to the exact stroke too,
-           losing the soft bloom. -->
-      <div class="ecg-glow" aria-hidden="true"></div>
-      <div class="ecg-fx__spike-glow" aria-hidden="true"></div>
-      <div class="ecg-fx" aria-hidden="true">
-        <div class="ecg-fx__sweep"></div>
-      </div>
-    </div>
-
+    <!-- The actual Pulse logo asset (assets/logo/pulse-logo.png - the
+         team's own upload, pixels untouched), used exactly as provided.
+         Static here on purpose - the block loader below carries all the
+         motion now; nothing animates the logo itself. -->
+    <img class="pulse-loader__logo" src="../../../assets/logo/pulse-logo.png" alt="Pulse" />
     <div class="product-name">Pulse Workspace</div>
 
-    <div class="status">
-      <span class="status-message" id="status-message">Initializing...</span>
+    <div class="pulse-loader__track" role="status" aria-live="polite" aria-label="Loading">
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
+      <div class="pulse-loader__block"></div>
     </div>
+
+    <div class="pulse-loader__message" id="pulse-loader-message">Initializing...</div>
   </div>
 
   <script src="splash.js"></script>
